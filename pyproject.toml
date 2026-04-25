@@ -1,0 +1,33 @@
+[project]
+name = "ticketswap"
+version = "0.1.0"
+description = "Local TicketSwap reservation sniper. Watches event URLs, races to click 'Add to cart' when a ticket appears, and emails the user to finish manual checkout."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "click>=8.1",
+    "playwright>=1.46",
+    "python-dotenv>=1.0",
+    "httpx>=0.27",
+    "imap-tools>=1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+ticketswap = "ticketswap.cli:cli"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["ticketswap*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
