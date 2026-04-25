@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TicketSwap helper - Setup</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #fff;
+      --text: #111;
+      --muted: #666;
+      --primary: #0d6efd;
+      --primary-hover: #0b5ed7;
+      --danger: #b91c1c;
+      --warning-bg: #fff7e0;
+      --warning-border: #f0d265;
+      --border: #e5e7eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    main { max-width: 640px; margin: 0 auto; }
+    h1 { margin: 0 0 4px; font-size: 28px; }
+    .lede { color: var(--muted); margin: 0 0 16px; }
+    .warning {
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: var(--danger);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+    }
+    fieldset {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin: 0 0 16px;
+    }
+    legend { font-weight: 600; padding: 0 8px; }
+    label.field {
+      display: block;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    label.field > span.label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    label.field > span.hint {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    input[type=text], input[type=tel], input[type=number],
+    input[type=password], input[type=email], input[type=url], select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      background: #fff;
+    }
+    input:focus, select:focus {
+      outline: 2px solid var(--primary);
+      outline-offset: -1px;
+      border-color: var(--primary);
+    }
+    label.checkbox {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .row { display: flex; gap: 12px; }
+    .row > label.field { flex: 1; }
+    button {
+      width: 100%;
+      padding: 14px 24px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 17px;
+      font-weight: 600;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover { background: var(--primary-hover); }
+    a { color: var(--primary); }
+    code {
+      background: #eef0f2;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .install-steps ol { padding-left: 18px; }
+    .install-steps li { margin-bottom: 8px; }
+    .install-steps pre {
+      background: #1f2937;
+      color: #f9fafb;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .step-section { margin-top: 28px; }
+    .step-section h2 { font-size: 18px; margin: 24px 0 8px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    @media (max-width: 480px) {
+      .row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>TicketSwap helper</h1>
+    <p class="lede">Fill this in. Download the zip. You'll get the install steps inside.</p>
+
+    <div class="warning">
+      <strong>Heads up.</strong> Using bots on TicketSwap is against their
+      Terms of Service. Accounts can be banned, and KYC means recovering
+      one is hard. This is for personal use, at your own risk.
+    </div>
+
+    {% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+    <form method="POST" action="/generate" autocomplete="off">
+      {% if access_password_required %}
+      <fieldset>
+        <legend>Access password</legend>
+        <label class="field">
+          <span class="label">Password</span>
+          <input type="password" name="access_password" required>
+        </label>
+      </fieldset>
+      {% endif %}
+
+      <fieldset>
+        <legend>WhatsApp notifications</legend>
+        <p class="muted">
+          Free, via CallMeBot. Set up your APIKEY first:
+          <a href="https://www.callmebot.com/blog/free-api-whatsapp-messages/" target="_blank" rel="noopener">CallMeBot instructions</a>.
+        </p>
+        <label class="field">
+          <span class="label">Your WhatsApp number (with country code)</span>
+          <input type="tel" name="whatsapp_phone" required
+                 placeholder="+32472123456"
+                 value="{{ form.whatsapp_phone or '' }}">
+        </label>
+        <label class="field">
+          <span class="label">Your CallMeBot APIKEY</span>
+          <input type="text" name="whatsapp_apikey" required inputmode="numeric"
+                 placeholder="1234567"
+                 value="{{ form.whatsapp_apikey or '' }}">
+          <span class="hint">The number CallMeBot sent back after you activated.</span>
+        </label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Email backup (optional)</legend>
+        <label class="checkbox">
+          <input type="checkbox" name="email_enabled" id="email_enabled"
+                 {% if form.email_enabled %}checked{% endif %}
+                 onchange="toggleEmail()">
+          Also send me email alerts
+        </label>
+        <div id="email_fields" {% if not form.email_enabled %}hidden{% endif %}>
+          <p class="muted">
+            Gmail: requires a 16-char
+            <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">App Password</a>
+            (your normal password won't work).
+          </p>
+          <label class="field">
+            <span class="label">Gmail address</span>
+            <input type="email" name="smtp_user" value="{{ form.smtp_user or '' }}">
+          </label>
+          <label class="field">
+            <span class="label">Gmail App Password (16 chars)</span>
+            <input type="password" name="smtp_pass" value="">
+            <span class="hint">Not stored on this server. Goes straight into your downloaded .env.</span>
+          </label>
+          <label class="field">
+            <span class="label">Where to send alerts to</span>
+            <input type="email" name="alert_to" value="{{ form.alert_to or '' }}"
+                   placeholder="leave blank to use the Gmail address above">
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="imap_enabled" {% if form.imap_enabled %}checked{% endif %}>
+            Also use this Gmail to listen for TicketSwap's official alert emails (faster reactions)
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Event you want a ticket for</legend>
+        <label class="field">
+          <span class="label">TicketSwap event URL</span>
+          <input type="url" name="event_url" required
+                 placeholder="https://www.ticketswap.com/concert-tickets/..."
+                 value="{{ form.event_url or '' }}">
+        </label>
+        <label class="field">
+          <span class="label">Label</span>
+          <input type="text" name="event_label" required
+                 placeholder="Rosalia Antwerp"
+                 value="{{ form.event_label or '' }}">
+        </label>
+        <div class="row">
+          <label class="field">
+            <span class="label">Max price (EUR)</span>
+            <input type="number" name="event_max_price" min="1" step="1"
+                   placeholder="200"
+                   value="{{ form.event_max_price or '' }}">
+          </label>
+          <label class="field">
+            <span class="label">Number of tickets</span>
+            <input type="number" name="event_quantity" min="1" step="1"
+                   value="{{ form.event_quantity or '1' }}">
+          </label>
+        </div>
+        <div class="row">
+          <label class="field">
+            <span class="label">Mode</span>
+            <select name="event_mode">
+              <option value="auto" {% if form.event_mode == 'auto' or not form.event_mode %}selected{% endif %}>
+                Auto (try buy, fall back to raffle)
+              </option>
+              <option value="fcfs" {% if form.event_mode == 'fcfs' %}selected{% endif %}>
+                Buy only
+              </option>
+              <option value="raffle" {% if form.event_mode == 'raffle' %}selected{% endif %}>
+                Raffle only
+              </option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="label">Check every (seconds)</span>
+            <input type="number" name="event_poll" min="30" step="10"
+                   value="{{ form.event_poll or '60' }}">
+            <span class="hint">Lower = more aggressive but more risk of getting blocked. 60 is reasonable.</span>
+          </label>
+        </div>
+      </fieldset>
+
+      <button type="submit">Generate config &amp; download</button>
+    </form>
+
+    <section class="step-section install-steps">
+      <h2>What you do with the downloaded zip</h2>
+      <ol>
+        <li>Install Python 3.11 or newer from <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org</a>.
+            On Windows, tick <em>"Add python.exe to PATH"</em>.</li>
+        <li>Open a terminal (macOS: Spotlight → "Terminal" / Windows: Start → "PowerShell").</li>
+        <li>Run:<pre>git clone https://github.com/{{ github_repo }}.git
+cd ticketswap</pre></li>
+        <li>Unzip the file you just downloaded and drop <code>.env</code> and <code>watches.json</code> into that <code>ticketswap</code> folder.</li>
+        <li>Install (macOS / Linux):<pre>python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+playwright install chromium</pre>
+            (Windows: replace the first two lines with <code>python -m venv .venv</code> and <code>.venv\Scripts\Activate.ps1</code>.)</li>
+        <li>Test:<pre>python -m ticketswap test-alerts</pre>
+            You should get a WhatsApp on your phone within seconds.</li>
+        <li>Log in to TicketSwap once:<pre>python -m ticketswap login</pre></li>
+        <li>Start watching:<pre>python -m ticketswap run</pre>
+            Leave the terminal open. When a ticket appears, your phone buzzes. Tap the link, pay in the TicketSwap app.</li>
+      </ol>
+      <p class="muted">
+        Full README:
+        <a href="https://github.com/{{ github_repo }}/blob/{{ git_branch }}/README.md" target="_blank" rel="noopener">README</a>.
+      </p>
+    </section>
+  </main>
+  <script>
+    function toggleEmail() {
+      var checked = document.getElementById('email_enabled').checked;
+      document.getElementById('email_fields').hidden = !checked;
+    }
+  </script>
+</body>
+</html>
