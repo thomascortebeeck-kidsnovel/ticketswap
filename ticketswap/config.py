@@ -43,6 +43,7 @@ class Settings:
     imap_host: str | None
     imap_user: str | None
     imap_pass: str | None
+    ntfy_url: str | None
     profile_dir: Path
     watches_path: Path
     shots_dir: Path = field(default_factory=lambda: Path("./shots"))
@@ -65,6 +66,7 @@ def load_settings() -> Settings:
         imap_host=os.environ.get("IMAP_HOST") or None,
         imap_user=os.environ.get("IMAP_USER") or None,
         imap_pass=os.environ.get("IMAP_PASS") or None,
+        ntfy_url=os.environ.get("NTFY_URL") or None,
         profile_dir=Path(os.environ.get("TICKETSWAP_PROFILE_DIR", "./.chromium-profile")),
         watches_path=Path(os.environ.get("WATCHES_PATH", "./watches.json")),
     )

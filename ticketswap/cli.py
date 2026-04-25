@@ -59,6 +59,25 @@ def setup() -> None:
     else:
         imap_host = imap_user = imap_pass = ""
 
+    use_push = click.confirm(
+        "Configure ntfy.sh push notifications? "
+        "(Free, instant tap-to-open notification on your phone.)",
+        default=bool(existing.get("NTFY_URL")),
+    )
+    if use_push:
+        click.echo(
+            "\nPick a long random topic name - it's the only auth on ntfy.sh.\n"
+            "  Example: ticketswap-thomas-9f2k7p3qz4\n"
+            "Install the 'ntfy' app on your phone and subscribe to the same\n"
+            "topic so notifications arrive there.\n"
+        )
+        ntfy_url = click.prompt(
+            "Full ntfy URL (https://ntfy.sh/<your-topic>)",
+            default=existing.get("NTFY_URL", "https://ntfy.sh/"),
+        )
+    else:
+        ntfy_url = ""
+
     profile_dir = existing.get("TICKETSWAP_PROFILE_DIR", "./.chromium-profile")
     watches_path = existing.get("WATCHES_PATH", "./watches.json")
 
@@ -71,6 +90,7 @@ def setup() -> None:
         f"IMAP_HOST={imap_host}",
         f"IMAP_USER={imap_user}",
         f"IMAP_PASS={imap_pass}",
+        f"NTFY_URL={ntfy_url}",
         f"TICKETSWAP_PROFILE_DIR={profile_dir}",
         f"WATCHES_PATH={watches_path}",
     ]

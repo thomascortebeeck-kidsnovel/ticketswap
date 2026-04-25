@@ -8,8 +8,9 @@ from .claimer import ClaimResult, claim_url
 from .config import Settings, Watch, load_watches
 from .imap_listener import stream_alerts
 from .matcher import event_id, match_alert_to_watches
-from .notifier import send_alert
+from .notifier import build_messages, send_alert
 from .poller import fetch_html, looks_available, sleep_with_jitter
+from .push import send_push
 
 # Only one Playwright claim runs at a time - the persistent profile is single-use,
 # and we don't want two claims fighting over the same browser session.
@@ -164,29 +165,24 @@ def _try_claim(
 def _email_success(
     settings: Settings, watch: Watch, url: str, result: ClaimResult
 ) -> None:
-    if result.kind == "raffle":
-        subject = f"[RAFFLE ENTERED] {watch.label}"
-        action_line = (
-            "You're in the raffle. Watch your TicketSwap account / email "
-            "for the result."
-        )
-    else:
-        subject = f"[RESERVED] {watch.label}"
-        action_line = (
-            "Reserved! Finish payment in TicketSwap within ~10 minutes."
-        )
-    body = "\n".join(
-        [
-            f"Watch: {watch.label}",
-            f"Listing URL: {url}",
-            f"Result: {result.message}",
-            f"Final URL: {result.final_url or '(none)'}",
-            "",
-            action_line,
-        ]
+    cart_url = result.final_url or url
+    subject, text, html = build_messages(
+        label=watch.label,
+        cart_url=cart_url,
+        listing_url=url,
+        kind=result.kind or "reservation",
+        message=result.message,
     )
+
     try:
-        send_alert(settings, subject, body, result.screenshot)
+        send_alert(settings, subject, text, html, result.screenshot)
         print(f"[email] sent to {settings.alert_to}")
     except Exception as e:
         print(f"[email] failed: {e}")
+
+    if settings.ntfy_url:
+        try:
+            send_push(settings.ntfy_url, subject, text.splitlines()[0], cart_url)
+            print("[push] sent to ntfy")
+        except Exception as e:
+            print(f"[push] failed: {e}")

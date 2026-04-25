@@ -33,6 +33,11 @@ Walks you through writing a local `.env`:
 - **IMAP** (optional). If you also turn on TicketSwap's official "Ticket
   alerts" for your event, this listens to those emails via IMAP IDLE and
   fires the claimer the second they arrive - lower footprint than polling.
+- **ntfy.sh push** (optional, recommended for mobile). Free, no account.
+  Pick a long random topic name in setup, install the
+  [ntfy app](https://ntfy.sh/) on your phone, and subscribe to the same
+  topic. When a claim succeeds, your phone gets an instant notification
+  with an "Open cart" button that deep-links into the TicketSwap app.
 
 Then log in once:
 
@@ -111,11 +116,29 @@ ticketswap/
   poller.py          Cheap anonymous availability check
   imap_listener.py   IMAP IDLE listener for TicketSwap alert emails
   matcher.py         Match alert URLs to watches by event id
-  notifier.py        SMTP email sender
+  notifier.py        SMTP email (mobile-friendly HTML + plain text)
+  push.py            ntfy.sh push notification sender
   runner.py          Main loop wiring everything together
 tests/               Unit tests for the URL/HTML/config helpers
 PLAN.md              Design doc + risks + open questions
 ```
+
+## Finishing payment from your phone
+
+TicketSwap's cart is account-bound, not session-bound: when the bot reserves
+on your laptop, the ticket sits in *your account's* cart server-side, and
+any device logged into the same account can complete payment.
+
+So once you get the email or ntfy push:
+
+1. Tap the cart link / "Open cart" button.
+2. The TicketSwap app (or mobile browser, logged into the same account)
+   shows the ticket waiting.
+3. Pay with your saved payment method. Done.
+
+Do this **before** you need it: install the TicketSwap app on your phone,
+log in, and save a payment method (card, iDEAL, Bancontact). Then the
+phone path is one tap → pay.
 
 ## What this does not do
 
