@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import json
 import os
 from dataclasses import dataclass, field
@@ -9,15 +10,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# What the claimer will try to do when a listing appears.
+# - "fcfs":   only click the buy/reserve button
+# - "raffle": only click the join-raffle / waiting-list button
+# - "auto":   try buy first, fall back to raffle (works for either sale type)
+WATCH_MODES = ("fcfs", "raffle", "auto")
+
 
 @dataclass
 class Watch:
     label: str
     url: str
     max_price_eur: float | None = None
+    quantity: int | None = None
+    mode: str = "auto"
     active: bool = True
     polling_seconds: int = 0
     cooldown_seconds: int = 600
+
+    def __post_init__(self) -> None:
+        if self.mode not in WATCH_MODES:
+            raise ValueError(f"mode must be one of {WATCH_MODES}, got {self.mode!r}")
 
 
 @dataclass
@@ -61,4 +74,5 @@ def load_watches(path: Path) -> list[Watch]:
     if not path.exists():
         return []
     raw = json.loads(path.read_text())
-    return [Watch(**item) for item in raw]
+    fields = {f.name for f in dataclasses.fields(Watch)}
+    return [Watch(**{k: v for k, v in item.items() if k in fields}) for item in raw]

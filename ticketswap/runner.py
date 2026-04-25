@@ -142,18 +142,39 @@ def _try_claim(
     try:
         _set_cooldown(watch, cooldowns, cooldown_lock)
         print(f"[claim] {watch.label}: opening {url}")
-        result = claim_url(settings, url, max_price_eur=watch.max_price_eur)
+        result = claim_url(
+            settings,
+            url,
+            max_price_eur=watch.max_price_eur,
+            mode=watch.mode,
+            quantity=watch.quantity,
+        )
         print(f"[claim] {watch.label}: {result.message}")
-        _email_result(settings, watch, url, result)
+        if result.success:
+            _email_success(settings, watch, url, result)
+        else:
+            # Someone else was quicker, the page changed, or the locator missed.
+            # Don't email - just log + keep the screenshot for debugging.
+            shot = result.screenshot
+            print(f"[claim] {watch.label}: not emailing (no success). screenshot={shot}")
     finally:
         _claim_lock.release()
 
 
-def _email_result(
+def _email_success(
     settings: Settings, watch: Watch, url: str, result: ClaimResult
 ) -> None:
-    tag = "RESERVED" if result.success else "ALERT"
-    subject = f"[{tag}] {watch.label}"
+    if result.kind == "raffle":
+        subject = f"[RAFFLE ENTERED] {watch.label}"
+        action_line = (
+            "You're in the raffle. Watch your TicketSwap account / email "
+            "for the result."
+        )
+    else:
+        subject = f"[RESERVED] {watch.label}"
+        action_line = (
+            "Reserved! Finish payment in TicketSwap within ~10 minutes."
+        )
     body = "\n".join(
         [
             f"Watch: {watch.label}",
@@ -161,11 +182,7 @@ def _email_result(
             f"Result: {result.message}",
             f"Final URL: {result.final_url or '(none)'}",
             "",
-            (
-                "Reserved! Finish payment in TicketSwap within ~10 minutes."
-                if result.success
-                else "Investigate manually - reservation unconfirmed."
-            ),
+            action_line,
         ]
     )
     try:
