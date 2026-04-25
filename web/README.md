@@ -4,6 +4,10 @@ A small FastAPI app that renders a form, validates it server-side, and
 returns a `ticketswap-config.zip` containing `.env`, `watches.json`, and
 an `INSTALL.txt` for the user.
 
+The Cloud Run image is built from the `Dockerfile` at the **repo root**
+(not in `web/`) so that `gcloud run deploy --source .` picks it up
+instead of falling back to Buildpacks.
+
 The bot itself **does not run here**. Each end-user still runs the bot
 locally on their own machine - this site only generates the config and
 the install instructions. That keeps the wizard inside Cloud Run free

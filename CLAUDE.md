@@ -48,9 +48,11 @@ tests/               pytest unit tests (matcher, poller, config, notifier)
 web/
   app.py             FastAPI setup-wizard (form -> zip download)
   templates/         Jinja2 HTML for the form + install steps
-  Dockerfile         Cloud Run image
   README.md          deploy instructions
   tests/             pytest tests for the wizard
+Dockerfile           Cloud Run image (at repo root so --source picks it up)
+.dockerignore        excludes .git/.venv/etc from the build context
+.gcloudignore        excludes the same from the gcloud upload
 PLAN.md              design doc (risks, tradeoffs, build phases)
 README.md           non-technical user guide
 ```
