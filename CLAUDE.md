@@ -45,9 +45,21 @@ ticketswap/
   whatsapp.py        WhatsApp via CallMeBot's free gateway
   runner.py          Threading: per-watch poller + IMAP loop, claim mutex, notify on success
 tests/               pytest unit tests (matcher, poller, config, notifier)
+web/
+  app.py             FastAPI setup-wizard (form -> zip download)
+  templates/         Jinja2 HTML for the form + install steps
+  Dockerfile         Cloud Run image
+  README.md          deploy instructions
+  tests/             pytest tests for the wizard
 PLAN.md              design doc (risks, tradeoffs, build phases)
 README.md           non-technical user guide
 ```
+
+The wizard runs **separately** on Cloud Run and never logs in to
+TicketSwap or runs the bot. It only generates `.env` + `watches.json` +
+`INSTALL.txt` for the user to download and use locally. Centralising
+the bot itself was explicitly rejected (ToS, IP burn, credential
+liability); see `PLAN.md` if asked to revisit.
 
 ## Architecture quick reference
 

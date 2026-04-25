@@ -18,10 +18,10 @@ jobs:
 
       - name: Install
         run: |
-          pip install -e ".[dev]"
+          pip install -e ".[dev,web]"
 
       - name: Lint
         run: ruff check .
 
       - name: Tests
-        run: pytest -v
+        run: pytest -v tests/ web/tests/
