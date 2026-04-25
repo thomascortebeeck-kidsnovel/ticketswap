@@ -8,6 +8,8 @@ import click
 from .claimer import claim_url
 from .config import WATCH_MODES, Watch, load_settings, load_watches
 from .login import do_login
+from .notifier import build_messages, send_alert
+from .push import send_push
 from .runner import run_watch_loop
 
 
@@ -140,6 +142,42 @@ def test(
 def run() -> None:
     """Start the main watch loop (polling + optional IMAP listener)."""
     run_watch_loop(load_settings())
+
+
+@cli.command(name="test-alerts")
+def test_alerts() -> None:
+    """Send a fake-success email + push so you can confirm both channels work."""
+    settings = load_settings()
+    subject, text, html = build_messages(
+        label="Test Watch",
+        cart_url="https://www.ticketswap.com/",
+        listing_url="https://www.ticketswap.com/",
+        kind="reservation",
+        message="Test - no real reservation happened.",
+    )
+    subject = "[TEST] " + subject
+
+    click.echo(f"Email -> {settings.alert_to}")
+    try:
+        send_alert(settings, subject, text, html)
+        click.echo("  ok")
+    except Exception as e:
+        click.echo(f"  FAILED: {e}")
+
+    if settings.ntfy_url:
+        click.echo(f"Push  -> {settings.ntfy_url}")
+        try:
+            send_push(
+                settings.ntfy_url,
+                subject,
+                "If you see this on your phone, push works.",
+                "https://www.ticketswap.com/",
+            )
+            click.echo("  ok")
+        except Exception as e:
+            click.echo(f"  FAILED: {e}")
+    else:
+        click.echo("Push -> skipped (NTFY_URL is empty)")
 
 
 @cli.command(name="list")

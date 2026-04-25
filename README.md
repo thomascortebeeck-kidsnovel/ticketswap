@@ -1,55 +1,245 @@
-# TicketSwap reservation sniper
+# TicketSwap helper
 
-A small local Python tool. Watches one or more TicketSwap event URLs, races to
-click "Add to cart" (or "Join raffle") the second a ticket appears, and emails
-you so you can finish manual checkout within the cart-hold window.
+A small program that runs on your computer and watches a TicketSwap event
+page for you. The moment a ticket appears, it clicks "Add to cart" so the
+ticket lands in your basket. Then it sends you an email and a notification
+on your phone so you can finish paying — even if you're not at home.
 
-> **Heads up.** Automated access is against TicketSwap's Terms of Service. Use
-> at your own risk; KYC means a banned account is hard to replace. Read
-> [`PLAN.md`](./PLAN.md) before running.
+**You still pay manually**. The program only races to grab the ticket
+before someone else does.
 
-## Install
+> ⚠️ **Heads up — please read.** Using bots on TicketSwap is against their
+> Terms of Service. They can ban your account, and because they verify
+> identity (KYC), getting a new account is hard. This is for personal use,
+> at your own risk.
+
+---
+
+## What you'll need
+
+1. **A computer** that can stay turned on (Mac, Windows, or Linux).
+2. **A TicketSwap account** — sign up at https://www.ticketswap.com/ if
+   you haven't.
+3. **A Gmail account** for sending the alert emails. Other providers work
+   too, but this guide uses Gmail because it's the easiest.
+4. **A phone** with internet, the **TicketSwap app**, and the **ntfy app**
+   (free, see below).
+5. **About 20 minutes** the first time. After setup, starting it again
+   takes 10 seconds.
+
+---
+
+## Step 1 — Open a terminal
+
+The "terminal" is a window where you type commands. Don't worry, you only
+type a few.
+
+### On macOS
+
+1. Press `Cmd + Space` to open Spotlight.
+2. Type `Terminal` and press Enter.
+
+A black or white window opens with a `$` prompt. That's the terminal.
+
+### On Windows
+
+1. Press the Windows key.
+2. Type `PowerShell` and press Enter.
+
+A blue window opens. That's the terminal.
+
+### On Linux
+
+You already know.
+
+> 💡 **Copy/paste tip.** When the guide shows a command in a grey box,
+> click inside it, select all the text, copy (Ctrl/Cmd + C), then paste
+> into the terminal (Ctrl/Cmd + V on Mac; right-click on Windows). Press
+> Enter to run.
+
+---
+
+## Step 2 — Install Python
+
+Python is the language this program is written in.
+
+### macOS
+
+Open Terminal and paste this, then press Enter:
 
 ```bash
-python -m venv .venv && source .venv/bin/activate
+python3 --version
+```
+
+- If it prints something like `Python 3.11.5` (anything 3.11 or higher),
+  you're done — skip to Step 3.
+- If it says "command not found" or shows an older version, install the
+  latest Python from https://www.python.org/downloads/ (download the
+  installer, double-click it, click Next a few times).
+
+### Windows
+
+Open PowerShell and paste:
+
+```powershell
+python --version
+```
+
+- If it prints `Python 3.11` or higher, skip to Step 3.
+- Otherwise: install Python from https://www.python.org/downloads/. **On
+  the first installer screen, tick the box "Add python.exe to PATH" before
+  clicking Install.** That's important.
+
+---
+
+## Step 3 — Download the program
+
+In the terminal, paste:
+
+```bash
+git clone https://github.com/thomascortebeeck-kidsnovel/ticketswap.git
+cd ticketswap
+git checkout claude/ticketswap-bot-plan-SMX2r
+```
+
+> 💡 If `git` isn't installed: download it from https://git-scm.com/downloads,
+> install with the default options, close the terminal, reopen it, and try
+> again.
+
+You should now see a list of files when you type `ls` (Mac/Linux) or
+`dir` (Windows). Look for `README.md` and a folder called `ticketswap`.
+
+---
+
+## Step 4 — Install the program
+
+Still in the same terminal window. Paste these one at a time:
+
+### macOS / Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e .
 playwright install chromium
 ```
 
-## First-time setup
+### Windows (PowerShell)
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .
+playwright install chromium
+```
+
+The last command downloads Chromium (the browser the program drives). It's
+about 150 MB; coffee break.
+
+> 💡 Whenever you reopen the terminal later, you have to "activate" the
+> environment again with `source .venv/bin/activate` (Mac/Linux) or
+> `.venv\Scripts\Activate.ps1` (Windows) before running `python -m
+> ticketswap ...` commands. Your prompt shows `(.venv)` when it's active.
+
+---
+
+## Step 5 — Get a Gmail "App Password"
+
+This is the password the program uses to send you alert emails. Don't use
+your real Gmail password.
+
+1. Make sure 2-step verification is on for your Google account:
+   https://myaccount.google.com/security
+2. Open https://myaccount.google.com/apppasswords
+3. App: **Mail**. Device: **Other** → type `TicketSwap helper` → Generate.
+4. Google shows a 16-character password. Copy it. You'll paste it in the
+   next step.
+
+---
+
+## Step 6 — Pick an ntfy topic for phone notifications
+
+ntfy is a free push-notification service. We pick a secret-ish topic name;
+your phone subscribes to it; the program posts to it; your phone buzzes.
+
+1. Make up a long random topic name. Example:
+   `ticketswap-thomas-9f2k7p3qz4` — your name + random letters/digits.
+   **Don't share it.** Anyone who knows it could send you fake
+   notifications.
+2. On your phone:
+   - Install **ntfy** from the App Store / Play Store.
+   - Open it → **+ Subscribe to topic**.
+   - Topic name: paste the same name you picked.
+   - Server: leave as the default (`ntfy.sh`).
+3. The full URL you'll need below is `https://ntfy.sh/<your-topic>`.
+
+---
+
+## Step 7 — Set up the program
+
+In the terminal:
 
 ```bash
 python -m ticketswap setup
 ```
 
-Walks you through writing a local `.env`:
+It asks a series of questions. Press Enter to accept the suggestion in
+brackets `[...]`.
 
-- **SMTP** (where alert emails are sent FROM). For Gmail, enable 2FA and
-  create an [App Password](https://myaccount.google.com/apppasswords); use it
-  as `SMTP_PASS`.
-- **Alert recipient** (where alerts go). Defaults to the SMTP user; can be a
-  different address (this is what the prompt is for - one tool, multiple
-  users, each with their own inbox).
-- **IMAP** (optional). If you also turn on TicketSwap's official "Ticket
-  alerts" for your event, this listens to those emails via IMAP IDLE and
-  fires the claimer the second they arrive - lower footprint than polling.
-- **ntfy.sh push** (optional, recommended for mobile). Free, no account.
-  Pick a long random topic name in setup, install the
-  [ntfy app](https://ntfy.sh/) on your phone, and subscribe to the same
-  topic. When a claim succeeds, your phone gets an instant notification
-  with an "Open cart" button that deep-links into the TicketSwap app.
+| Prompt | What to type |
+|---|---|
+| SMTP host | press Enter (Gmail) |
+| SMTP port | press Enter (587) |
+| SMTP user | your Gmail address |
+| SMTP password | the **App Password** from Step 5 |
+| Alert recipient | the email where you want notifications (usually same as SMTP user) |
+| Configure IMAP listener? | `y` (faster reactions) |
+| IMAP host / user / password | press Enter / Enter / Enter (uses Gmail values) |
+| Configure ntfy push? | `y` |
+| Full ntfy URL | `https://ntfy.sh/<your-topic>` from Step 6 |
 
-Then log in once:
+When it's done, you'll see "Wrote /path/to/.env".
+
+---
+
+## Step 8 — Test that alerts work
+
+```bash
+python -m ticketswap test-alerts
+```
+
+Within a few seconds you should see:
+
+- A test email in your inbox with a big blue **Open cart** button.
+- A notification on your phone (tap it → opens TicketSwap homepage).
+
+If both work, you're set. If something failed, check the error message in
+the terminal — usually a typo in the email password or ntfy URL. Re-run
+`python -m ticketswap setup` to fix.
+
+---
+
+## Step 9 — Log in to TicketSwap (one time)
 
 ```bash
 python -m ticketswap login
 ```
 
-A Chromium window opens. Log in to TicketSwap, return to the terminal, press
-Enter. Cookies are saved to `./.chromium-profile/`. **Don't share that
-folder** - it's an active session.
+A Chrome window opens. Log in to TicketSwap **as the same account you use
+on your phone**. Then go back to the terminal and press Enter.
 
-## Add a watch and run
+The window closes. The program saved your login so it doesn't need to ask
+again.
+
+> 🔒 The login is saved in a folder called `.chromium-profile` inside the
+> project folder. Don't share that folder with anyone — it contains your
+> active TicketSwap session.
+
+---
+
+## Step 10 — Add the event you want a ticket for
+
+Get the URL of the event from your browser. For example:
 
 ```bash
 python -m ticketswap add \
@@ -59,95 +249,133 @@ python -m ticketswap add \
   --quantity 1 \
   --mode auto \
   --poll 60
+```
 
+What each part means:
+
+- The URL: copy it from your browser. **Keep the quotes around it.**
+- `--label`: any name you'll recognise.
+- `--max-price`: the most you're willing to pay, in euros. Skip if too
+  expensive.
+- `--quantity`: how many tickets you want. (For now this is just a note —
+  the program reserves whatever listing it finds first.)
+- `--mode auto`: try the regular "Buy" button first, fall back to "Join
+  raffle" if the event is a raffle. Use `fcfs` if you only want regular
+  tickets, `raffle` for raffle-only.
+- `--poll 60`: check every 60 seconds.
+
+To check what's saved:
+
+```bash
 python -m ticketswap list
+```
+
+To remove something:
+
+```bash
+python -m ticketswap remove "Rosalia"
+```
+
+---
+
+## Step 11 — Start watching
+
+```bash
 python -m ticketswap run
 ```
 
-Options:
-
-| Flag | What it does |
-|---|---|
-| `--label` | Human-readable name (used in email subject). |
-| `--max-price` | Skip if the cheapest visible listing is over this price (EUR). |
-| `--quantity` | Number of tickets you want. **Stored but not yet used to filter listings** - implementing this needs the live DOM, see PLAN.md. |
-| `--mode fcfs` | Only click buy/reserve. |
-| `--mode raffle` | Only click join-raffle / waiting-list. |
-| `--mode auto` | Try buy first, fall back to raffle (default). |
-| `--poll` | Polling interval in seconds. `0` = IMAP-only. |
-
-`run` starts:
-
-- a polling thread per watch with `--poll > 0` (cheap anonymous GET; the
-  heavyweight Playwright claim only fires when the HTML hints availability),
-  and
-- an IMAP IDLE listener if you configured one in `setup`.
-
-**Emails.** You only get an email if the claim **succeeds** - i.e. you
-actually landed in cart/checkout for FCFS, or in the raffle confirmation
-page. If someone else was quicker, the bot logs the miss and saves the
-screenshot to `./shots/` for debugging, but doesn't email.
-
-- Reservation success → subject `[RESERVED] <label>` → finish payment within
-  ~10 minutes.
-- Raffle entered → subject `[RAFFLE ENTERED] <label>` → wait for the result
-  from TicketSwap.
-
-## Smoke test (no email)
-
-```bash
-python -m ticketswap test "<some-currently-available-listing>" --headed
-```
-
-Opens the URL with your saved session, tries the click flow, prints the
-result, saves a screenshot. **Run this once before relying on `run`** - if
-the locator misses, the screenshot tells us what to adjust in
-`ticketswap/claimer.py` (`BUY_TEXT`, `RAFFLE_TEXT`, or the locator
-fallbacks).
-
-## Files
+The terminal will print things like:
 
 ```
-ticketswap/
-  cli.py             setup, login, test, run, list, add, remove
-  config.py          .env + watches.json loader; Watch dataclass
-  claimer.py         Playwright: open URL, find buy/raffle button, click
-  login.py           One-time interactive login that persists cookies
-  poller.py          Cheap anonymous availability check
-  imap_listener.py   IMAP IDLE listener for TicketSwap alert emails
-  matcher.py         Match alert URLs to watches by event id
-  notifier.py        SMTP email (mobile-friendly HTML + plain text)
-  push.py            ntfy.sh push notification sender
-  runner.py          Main loop wiring everything together
-tests/               Unit tests for the URL/HTML/config helpers
-PLAN.md              Design doc + risks + open questions
+Loaded 1 active watch(es):
+  - Rosalia Antwerp  poll=60s  max=€200.0
+IMAP listener started on imap.gmail.com
 ```
 
-## Finishing payment from your phone
+**Leave this window open.** As long as it's running, the program is
+checking every minute. If a ticket appears:
 
-TicketSwap's cart is account-bound, not session-bound: when the bot reserves
-on your laptop, the ticket sits in *your account's* cart server-side, and
-any device logged into the same account can complete payment.
+1. The program clicks **Add to cart** on the laptop.
+2. Your phone gets a ntfy notification with an **Open cart** button.
+3. You also get an email with the same button.
+4. Tap **Open cart** on your phone. The TicketSwap app opens with the
+   ticket already in your basket.
+5. Pay (you've already saved a payment method, right?). Done.
 
-So once you get the email or ntfy push:
+You have **about 10 minutes** from the notification before the cart times
+out and the ticket goes back to the pool. Don't wait too long.
 
-1. Tap the cart link / "Open cart" button.
-2. The TicketSwap app (or mobile browser, logged into the same account)
-   shows the ticket waiting.
-3. Pay with your saved payment method. Done.
+To stop the program: click in its terminal window and press `Ctrl + C`.
 
-Do this **before** you need it: install the TicketSwap app on your phone,
-log in, and save a payment method (card, iDEAL, Bancontact). Then the
-phone path is one tap → pay.
+---
 
-## What this does not do
+## Before you actually need this — pre-flight checks
 
-- **Doesn't pay.** Intentional. Human in the loop, lower ToS exposure.
-- **Doesn't filter listings by quantity yet.** The field is stored; the
-  selection logic needs the live DOM.
-- **Doesn't bypass CAPTCHAs.** If you hit a Cloudflare challenge, polling
-  backs off; log in fresh.
-- **Doesn't change raffle odds.** Speed doesn't help in raffles - the bot
-  just enters quickly so you don't forget.
+Do these once, ahead of the event you care about:
 
-See [`PLAN.md`](./PLAN.md) for full architecture, risks, and tradeoffs.
+- ✅ Run `python -m ticketswap test-alerts`. Email + push both work.
+- ✅ On your phone, install the **TicketSwap** app and log in (same
+  account the bot uses).
+- ✅ In the TicketSwap app, save a **payment method** (card / iDEAL /
+  Bancontact). Otherwise checkout takes too long.
+- ✅ On your phone, make sure the ntfy app is allowed to show
+  notifications when the phone is locked (Settings → Notifications →
+  ntfy → Allow).
+- ✅ On your laptop, disable sleep / system updates while the bot is
+  running (you can re-enable after).
+
+---
+
+## Troubleshooting
+
+**"command not found: python3"**
+You skipped Step 2. Install Python.
+
+**"command not found: git"**
+Install Git from https://git-scm.com/downloads, then close and reopen
+the terminal.
+
+**The browser opens but I get a CAPTCHA**
+Solve it manually in the window during `login`. If it happens during a
+real claim, the program backs off and waits. There's no way for the
+program to bypass CAPTCHAs.
+
+**Email isn't arriving**
+Almost always a wrong password. The Gmail App Password (Step 5) is
+**not** your normal Gmail password. Re-generate one and re-run
+`python -m ticketswap setup`.
+
+**Phone notification isn't arriving**
+- Open the ntfy app and check you're subscribed to the right topic.
+- Check the URL in your `.env` file matches.
+- Check phone notification permissions for the ntfy app.
+
+**The bot says "no buy button visible" but a ticket is clearly there**
+Means the locator missed. Look at the most recent screenshot in the
+`shots/` folder. The website's HTML may have changed slightly. Open a
+GitHub issue with the screenshot and we'll update.
+
+**Account got banned**
+Sorry. Read the warning at the top of this README again before trying
+to make a new one.
+
+---
+
+## What this program does NOT do
+
+- It does **not** pay for the ticket. You always do that step.
+- It does **not** work for raffle events any faster than a human (raffles
+  pick winners randomly; speed doesn't help).
+- It does **not** bypass CAPTCHAs or other anti-bot challenges.
+- It does **not** run in the cloud. Your computer has to be on.
+
+---
+
+## Files in this repo
+
+- `PLAN.md` — design doc with risks and tradeoffs (technical).
+- `CLAUDE.md` — notes for Claude when extending the code.
+- `ticketswap/` — the program's source code.
+- `tests/` — automated tests for parts of the code.
+
+If anything in this guide is unclear, open a GitHub issue.
