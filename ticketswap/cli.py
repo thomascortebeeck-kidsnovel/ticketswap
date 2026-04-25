@@ -9,8 +9,8 @@ from .claimer import claim_url
 from .config import WATCH_MODES, Watch, load_settings, load_watches
 from .login import do_login
 from .notifier import build_messages, send_alert
-from .push import send_push
 from .runner import run_watch_loop
+from .whatsapp import normalize_phone, send_whatsapp
 
 
 @click.group(help="Local TicketSwap reservation sniper.")
@@ -20,70 +20,113 @@ def cli() -> None:
 
 @cli.command()
 def setup() -> None:
-    """Interactive setup. Writes .env with SMTP/IMAP/alert email."""
+    """Interactive setup. Writes .env with notification + IMAP settings."""
     env_path = Path(".env")
     existing = _read_env(env_path)
 
     click.echo("Configuring TicketSwap. Press Enter to keep an existing value.\n")
 
-    smtp_host = click.prompt("SMTP host", default=existing.get("SMTP_HOST", "smtp.gmail.com"))
-    smtp_port = click.prompt(
-        "SMTP port", default=int(existing.get("SMTP_PORT", "587")), type=int
+    # --- WhatsApp (recommended primary channel) ---
+    click.echo("---- WhatsApp notifications (free, via CallMeBot) ----")
+    use_whatsapp = click.confirm(
+        "Configure WhatsApp notifications?",
+        default=bool(existing.get("WHATSAPP_APIKEY")) or True,
     )
-    smtp_user = click.prompt(
-        "SMTP user (the email address that will SEND alerts)",
-        default=existing.get("SMTP_USER", ""),
-    )
-    smtp_pass = click.prompt(
-        "SMTP password (Gmail: an App Password)",
-        default=existing.get("SMTP_PASS", ""),
-        hide_input=True,
-        show_default=False,
-    )
-    alert_to = click.prompt(
-        "Alert recipient (the email address that will RECEIVE alerts)",
-        default=existing.get("ALERT_TO", smtp_user),
-    )
+    if use_whatsapp:
+        click.echo(
+            "\nOne-time CallMeBot setup on your phone (do these steps now):\n"
+            "  1. Save the CallMeBot bot number to your contacts. The number\n"
+            "     and exact instructions are at:\n"
+            "       https://www.callmebot.com/blog/free-api-whatsapp-messages/\n"
+            "  2. Send this WhatsApp message to that contact:\n"
+            "       I allow callmebot to send me messages\n"
+            "  3. Wait for the reply. It contains your APIKEY.\n"
+        )
+        whatsapp_phone = click.prompt(
+            "Your WhatsApp number in international format "
+            "(e.g. +32472123456 or 32472123456)",
+            default=existing.get("WHATSAPP_PHONE", ""),
+        )
+        whatsapp_phone = normalize_phone(whatsapp_phone)
+        whatsapp_apikey = click.prompt(
+            "Your CallMeBot APIKEY (the number you got back on WhatsApp)",
+            default=existing.get("WHATSAPP_APIKEY", ""),
+        )
+    else:
+        whatsapp_phone = ""
+        whatsapp_apikey = ""
 
-    use_imap = click.confirm(
-        "Configure IMAP IDLE listener? (Faster than polling, optional)",
-        default=bool(existing.get("IMAP_HOST")),
+    # --- Email (now optional) ---
+    click.echo("\n---- Email backup (optional) ----")
+    click.echo(
+        "Email is a backup channel. Skip it if WhatsApp is enough.\n"
+        "Gmail needs an App Password, not your normal password:\n"
+        "  https://myaccount.google.com/apppasswords\n"
     )
-    if use_imap:
-        imap_host = click.prompt("IMAP host", default=existing.get("IMAP_HOST", "imap.gmail.com"))
-        imap_user = click.prompt("IMAP user", default=existing.get("IMAP_USER", smtp_user))
-        imap_pass = click.prompt(
-            "IMAP password",
-            default=existing.get("IMAP_PASS", smtp_pass),
+    use_email = click.confirm(
+        "Configure email alerts?",
+        default=bool(existing.get("SMTP_HOST")),
+    )
+    if use_email:
+        smtp_host = click.prompt(
+            "SMTP host", default=existing.get("SMTP_HOST", "smtp.gmail.com")
+        )
+        smtp_port = click.prompt(
+            "SMTP port", default=int(existing.get("SMTP_PORT", "587")), type=int
+        )
+        smtp_user = click.prompt(
+            "SMTP user (the email that SENDS alerts)",
+            default=existing.get("SMTP_USER", ""),
+        )
+        smtp_pass = click.prompt(
+            "SMTP password (Gmail App Password)",
+            default=existing.get("SMTP_PASS", ""),
             hide_input=True,
             show_default=False,
         )
+        alert_to = click.prompt(
+            "Alert recipient (the email that RECEIVES alerts)",
+            default=existing.get("ALERT_TO", smtp_user),
+        )
+
+        use_imap = click.confirm(
+            "Also use this Gmail to listen for TicketSwap's official alert "
+            "emails via IMAP? (Faster reactions; recommended.)",
+            default=bool(existing.get("IMAP_HOST")) or True,
+        )
+        if use_imap:
+            imap_host = click.prompt(
+                "IMAP host", default=existing.get("IMAP_HOST", "imap.gmail.com")
+            )
+            imap_user = click.prompt(
+                "IMAP user", default=existing.get("IMAP_USER", smtp_user)
+            )
+            imap_pass = click.prompt(
+                "IMAP password",
+                default=existing.get("IMAP_PASS", smtp_pass),
+                hide_input=True,
+                show_default=False,
+            )
+        else:
+            imap_host = imap_user = imap_pass = ""
     else:
+        smtp_host = smtp_port = smtp_user = smtp_pass = alert_to = ""
+        smtp_port = 587
         imap_host = imap_user = imap_pass = ""
 
-    use_push = click.confirm(
-        "Configure ntfy.sh push notifications? "
-        "(Free, instant tap-to-open notification on your phone.)",
-        default=bool(existing.get("NTFY_URL")),
-    )
-    if use_push:
+    if not (use_whatsapp or use_email):
         click.echo(
-            "\nPick a long random topic name - it's the only auth on ntfy.sh.\n"
-            "  Example: ticketswap-thomas-9f2k7p3qz4\n"
-            "Install the 'ntfy' app on your phone and subscribe to the same\n"
-            "topic so notifications arrive there.\n"
+            "\nWARNING: you turned both WhatsApp and email off. The bot will "
+            "claim tickets but won't tell you about it. Re-run setup to enable "
+            "at least one channel."
         )
-        ntfy_url = click.prompt(
-            "Full ntfy URL (https://ntfy.sh/<your-topic>)",
-            default=existing.get("NTFY_URL", "https://ntfy.sh/"),
-        )
-    else:
-        ntfy_url = ""
 
     profile_dir = existing.get("TICKETSWAP_PROFILE_DIR", "./.chromium-profile")
     watches_path = existing.get("WATCHES_PATH", "./watches.json")
 
     lines = [
+        f"WHATSAPP_PHONE={whatsapp_phone}",
+        f"WHATSAPP_APIKEY={whatsapp_apikey}",
         f"SMTP_HOST={smtp_host}",
         f"SMTP_PORT={smtp_port}",
         f"SMTP_USER={smtp_user}",
@@ -92,13 +135,13 @@ def setup() -> None:
         f"IMAP_HOST={imap_host}",
         f"IMAP_USER={imap_user}",
         f"IMAP_PASS={imap_pass}",
-        f"NTFY_URL={ntfy_url}",
         f"TICKETSWAP_PROFILE_DIR={profile_dir}",
         f"WATCHES_PATH={watches_path}",
     ]
     env_path.write_text("\n".join(lines) + "\n")
     click.echo(f"\nWrote {env_path.resolve()}")
-    click.echo("Next: run `python -m ticketswap login`.")
+    click.echo("Next: run `python -m ticketswap test-alerts` to confirm channels work,")
+    click.echo("then `python -m ticketswap login`.")
 
 
 @cli.command()
@@ -146,9 +189,9 @@ def run() -> None:
 
 @cli.command(name="test-alerts")
 def test_alerts() -> None:
-    """Send a fake-success email + push so you can confirm both channels work."""
+    """Send a fake-success notification through every configured channel."""
     settings = load_settings()
-    subject, text, html = build_messages(
+    subject, text, html, whatsapp = build_messages(
         label="Test Watch",
         cart_url="https://www.ticketswap.com/",
         listing_url="https://www.ticketswap.com/",
@@ -157,27 +200,35 @@ def test_alerts() -> None:
     )
     subject = "[TEST] " + subject
 
-    click.echo(f"Email -> {settings.alert_to}")
-    try:
-        send_alert(settings, subject, text, html)
-        click.echo("  ok")
-    except Exception as e:
-        click.echo(f"  FAILED: {e}")
-
-    if settings.ntfy_url:
-        click.echo(f"Push  -> {settings.ntfy_url}")
+    if settings.email_enabled:
+        click.echo(f"Email    -> {settings.alert_to}")
         try:
-            send_push(
-                settings.ntfy_url,
-                subject,
-                "If you see this on your phone, push works.",
-                "https://www.ticketswap.com/",
+            send_alert(settings, subject, text, html)
+            click.echo("  ok")
+        except Exception as e:
+            click.echo(f"  FAILED: {e}")
+    else:
+        click.echo("Email    -> skipped (not configured)")
+
+    if settings.whatsapp_enabled:
+        click.echo(f"WhatsApp -> +{settings.whatsapp_phone}")
+        try:
+            send_whatsapp(
+                settings.whatsapp_phone,
+                settings.whatsapp_apikey,
+                "[TEST] " + whatsapp,
             )
             click.echo("  ok")
         except Exception as e:
             click.echo(f"  FAILED: {e}")
     else:
-        click.echo("Push -> skipped (NTFY_URL is empty)")
+        click.echo("WhatsApp -> skipped (not configured)")
+
+    if not (settings.email_enabled or settings.whatsapp_enabled):
+        click.echo(
+            "\nNothing was sent because no channel is configured. "
+            "Run `python -m ticketswap setup`."
+        )
 
 
 @cli.command(name="list")

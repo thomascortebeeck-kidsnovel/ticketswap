@@ -41,8 +41,8 @@ ticketswap/
   poller.py          Cheap anonymous availability check (httpx GET + heuristic)
   imap_listener.py   IMAP IDLE listener for TicketSwap alert emails
   matcher.py         URL helpers: event-id parsing, alert -> watch matching
-  notifier.py        SMTP email; build_messages() builds (subject, text, html)
-  push.py            ntfy.sh push sender
+  notifier.py        SMTP email; build_messages() builds (subject, text, html, whatsapp)
+  whatsapp.py        WhatsApp via CallMeBot's free gateway
   runner.py          Threading: per-watch poller + IMAP loop, claim mutex, notify on success
 tests/               pytest unit tests (matcher, poller, config, notifier)
 PLAN.md              design doc (risks, tradeoffs, build phases)
@@ -73,10 +73,14 @@ Trigger paths:
 claimer tries. `auto` (default) tries buy first, then raffle.
 
 **Mobile delivery**: TicketSwap's cart is account-bound, so phone can finish
-payment if logged into the same account. We boost reach with mobile-friendly
-HTML email (button → cart URL) and ntfy.sh push (instant notification with
-"Open cart" deep link). Both fire on success, independently — one's failure
-doesn't block the other.
+payment if logged into the same account. **WhatsApp is the recommended
+primary channel** (via CallMeBot's free gateway) because it's universal in
+Belgium / NL and needs no SMTP password from the user. **Email is optional
+backup** — `Settings.email_enabled` and `Settings.whatsapp_enabled`
+properties gate each. The runner emails / WhatsApps independently on
+success; one channel's failure doesn't block the other. If neither is
+configured, the runner logs a warning and the user is told to re-run
+setup.
 
 ## Hard constraints
 
@@ -89,8 +93,8 @@ These were all explicitly chosen — don't change without asking the user:
 3. **No aggressive polling.** Default 60s + jitter. Don't lower below ~30s
    without strong reason (Cloudflare 1015 / account ban risk).
 4. **No credentials in committed files.** `.env` is gitignored;
-   `.env.example` uses placeholders only. Personal email goes in via the
-   interactive `setup` prompt.
+   `.env.example` uses placeholders only. Personal email and WhatsApp
+   number go in via the interactive `setup` prompt.
 5. **Locators stay role/text-based, not class-based.** TicketSwap uses
    hashed CSS classes that change. See `BUY_TEXT` / `RAFFLE_TEXT` regexes
    and `_first_visible` strategy in `claimer.py`.

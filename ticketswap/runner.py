@@ -10,7 +10,7 @@ from .imap_listener import stream_alerts
 from .matcher import event_id, match_alert_to_watches
 from .notifier import build_messages, send_alert
 from .poller import fetch_html, looks_available, sleep_with_jitter
-from .push import send_push
+from .whatsapp import send_whatsapp
 
 # Only one Playwright claim runs at a time - the persistent profile is single-use,
 # and we don't want two claims fighting over the same browser session.
@@ -166,7 +166,7 @@ def _email_success(
     settings: Settings, watch: Watch, url: str, result: ClaimResult
 ) -> None:
     cart_url = result.final_url or url
-    subject, text, html = build_messages(
+    subject, text, html, whatsapp = build_messages(
         label=watch.label,
         cart_url=cart_url,
         listing_url=url,
@@ -174,15 +174,19 @@ def _email_success(
         message=result.message,
     )
 
-    try:
-        send_alert(settings, subject, text, html, result.screenshot)
-        print(f"[email] sent to {settings.alert_to}")
-    except Exception as e:
-        print(f"[email] failed: {e}")
-
-    if settings.ntfy_url:
+    if settings.email_enabled:
         try:
-            send_push(settings.ntfy_url, subject, text.splitlines()[0], cart_url)
-            print("[push] sent to ntfy")
+            send_alert(settings, subject, text, html, result.screenshot)
+            print(f"[email] sent to {settings.alert_to}")
         except Exception as e:
-            print(f"[push] failed: {e}")
+            print(f"[email] failed: {e}")
+
+    if settings.whatsapp_enabled:
+        try:
+            send_whatsapp(settings.whatsapp_phone, settings.whatsapp_apikey, whatsapp)
+            print(f"[whatsapp] sent to +{settings.whatsapp_phone}")
+        except Exception as e:
+            print(f"[whatsapp] failed: {e}")
+
+    if not (settings.email_enabled or settings.whatsapp_enabled):
+        print("[notify] WARNING: no channel configured. Run `python -m ticketswap setup`.")

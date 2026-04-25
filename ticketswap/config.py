@@ -35,38 +35,41 @@ class Watch:
 
 @dataclass
 class Settings:
-    smtp_host: str
+    smtp_host: str | None
     smtp_port: int
-    smtp_user: str
-    smtp_pass: str
-    alert_to: str
+    smtp_user: str | None
+    smtp_pass: str | None
+    alert_to: str | None
     imap_host: str | None
     imap_user: str | None
     imap_pass: str | None
-    ntfy_url: str | None
+    whatsapp_phone: str | None
+    whatsapp_apikey: str | None
     profile_dir: Path
     watches_path: Path
     shots_dir: Path = field(default_factory=lambda: Path("./shots"))
 
+    @property
+    def email_enabled(self) -> bool:
+        return all([self.smtp_host, self.smtp_user, self.smtp_pass, self.alert_to])
 
-def _required(name: str) -> str:
-    val = os.environ.get(name)
-    if not val:
-        raise RuntimeError(f"Missing required env var: {name}. See .env.example.")
-    return val
+    @property
+    def whatsapp_enabled(self) -> bool:
+        return bool(self.whatsapp_phone and self.whatsapp_apikey)
 
 
 def load_settings() -> Settings:
     return Settings(
-        smtp_host=_required("SMTP_HOST"),
+        smtp_host=os.environ.get("SMTP_HOST") or None,
         smtp_port=int(os.environ.get("SMTP_PORT", "587")),
-        smtp_user=_required("SMTP_USER"),
-        smtp_pass=_required("SMTP_PASS"),
-        alert_to=_required("ALERT_TO"),
+        smtp_user=os.environ.get("SMTP_USER") or None,
+        smtp_pass=os.environ.get("SMTP_PASS") or None,
+        alert_to=os.environ.get("ALERT_TO") or None,
         imap_host=os.environ.get("IMAP_HOST") or None,
         imap_user=os.environ.get("IMAP_USER") or None,
         imap_pass=os.environ.get("IMAP_PASS") or None,
-        ntfy_url=os.environ.get("NTFY_URL") or None,
+        whatsapp_phone=os.environ.get("WHATSAPP_PHONE") or None,
+        whatsapp_apikey=os.environ.get("WHATSAPP_APIKEY") or None,
         profile_dir=Path(os.environ.get("TICKETSWAP_PROFILE_DIR", "./.chromium-profile")),
         watches_path=Path(os.environ.get("WATCHES_PATH", "./watches.json")),
     )

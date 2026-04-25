@@ -15,21 +15,31 @@ def build_messages(
     listing_url: str,
     kind: str,
     message: str,
-) -> tuple[str, str, str]:
-    """Build (subject, plain_text, html) for a successful claim.
+) -> tuple[str, str, str, str]:
+    """Build (subject, plain_text, html, whatsapp) for a successful claim.
 
-    Subject and plain-text are mobile-optimised: the cart URL is on the first
-    body line so any email client makes it tappable. The HTML alternative
-    renders a big tap target on phones.
+    - subject + plain_text + html go to email (HTML alternative for phones).
+    - whatsapp is a short message; CallMeBot's gateway works best with
+      compact text and lets WhatsApp auto-linkify the URL.
     """
     if kind == "raffle":
         subject = f"[RAFFLE ENTERED] {label}"
         action_text = "You're in the raffle. Watch TicketSwap for the result."
         button_label = "Open raffle status"
+        whatsapp = (
+            f"\U0001F39F Raffle entered: {label}\n"
+            f"{cart_url}\n"
+            "Watch TicketSwap for the result."
+        )
     else:
         subject = f"[RESERVED] {label} - PAY NOW"
         action_text = "Reserved! Pay within ~10 minutes."
         button_label = "Open cart in TicketSwap"
+        whatsapp = (
+            f"\U0001F39F RESERVED - pay within 10 min\n"
+            f"{label}\n"
+            f"{cart_url}"
+        )
 
     plain = "\n".join(
         [
@@ -44,7 +54,7 @@ def build_messages(
     )
 
     html_body = _html_body(action_text, cart_url, button_label, listing_url, label, message)
-    return subject, plain, html_body
+    return subject, plain, html_body, whatsapp
 
 
 def _html_body(
